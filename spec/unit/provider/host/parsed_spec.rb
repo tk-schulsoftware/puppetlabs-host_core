@@ -21,6 +21,8 @@ describe Puppet::Type.type(:host).provider(:parsed) do
     # the provider setter "host_aliases=(value)" will be
     # called with the joined array, so we just simulate that
     host = provider.new(hostresource)
+    args[:host_aliases] ||= []
+    args[:host_aliases] = [args[:name]] if args[:host_aliases].empty?
     args.each do |property, value|
       value = value.join(' ') if property == :host_aliases && value.is_a?(Array)
       host.send("#{property}=", value)
@@ -81,7 +83,7 @@ describe Puppet::Type.type(:host).provider(:parsed) do
     end
 
     it 'parses the name from the second field' do
-      expect(provider.parse_line('::1     localhost')[:name]).to eq('localhost')
+      expect(provider.parse_line('::1     localhost')[:name]).to eq(nil)
     end
 
     it 'sets an empty comment' do
@@ -89,7 +91,7 @@ describe Puppet::Type.type(:host).provider(:parsed) do
     end
 
     it 'sets host_aliases to :absent' do
-      expect(provider.parse_line('::1     localhost')[:host_aliases]).to eq(:absent)
+      expect(provider.parse_line('::1     localhost')[:host_aliases]).to eq('localhost')
     end
   end
 
@@ -101,7 +103,7 @@ describe Puppet::Type.type(:host).provider(:parsed) do
     end
 
     it 'parses the hostname from the second field' do
-      expect(provider.parse_line(testline)[:name]).to eq('localhost')
+      expect(provider.parse_line(testline)[:name]).to eq(nil)
     end
 
     it "parses the comment after the first '#' character" do
@@ -111,13 +113,13 @@ describe Puppet::Type.type(:host).provider(:parsed) do
 
   describe 'when parsing a line with ip, hostname and aliases' do
     it 'parses alias from the third field' do
-      expect(provider.parse_line('127.0.0.1   localhost   localhost.localdomain')[:host_aliases]).to eq('localhost.localdomain')
+      expect(provider.parse_line('127.0.0.1   localhost   localhost.localdomain')[:host_aliases]).to eq('localhost localhost.localdomain')
     end
 
     it 'parses multiple aliases' do
-      expect(provider.parse_line('127.0.0.1 host alias1 alias2')[:host_aliases]).to eq('alias1 alias2')
-      expect(provider.parse_line("127.0.0.1 host alias1\talias2")[:host_aliases]).to eq('alias1 alias2')
-      expect(provider.parse_line("127.0.0.1 host alias1\talias2   alias3")[:host_aliases]).to eq('alias1 alias2 alias3')
+      expect(provider.parse_line('127.0.0.1 host alias1 alias2')[:host_aliases]).to eq('host alias1 alias2')
+      expect(provider.parse_line("127.0.0.1 host alias1\talias2")[:host_aliases]).to eq('host alias1 alias2')
+      expect(provider.parse_line("127.0.0.1 host alias1\talias2   alias3")[:host_aliases]).to eq('host alias1 alias2 alias3')
     end
   end
 
@@ -130,11 +132,11 @@ describe Puppet::Type.type(:host).provider(:parsed) do
     end
 
     it 'parses the hostname from the second field' do
-      expect(provider.parse_line(testline)[:name]).to eq('host')
+      expect(provider.parse_line(testline)[:name]).to eq(nil)
     end
 
     it 'parses all host_aliases from the third field' do
-      expect(provider.parse_line(testline)[:host_aliases]).to eq('alias1 alias2 alias3')
+      expect(provider.parse_line(testline)[:host_aliases]).to eq('host alias1 alias2 alias3')
     end
 
     it "parses the comment after the first '#' character" do
@@ -159,20 +161,20 @@ describe Puppet::Type.type(:host).provider(:parsed) do
       host = mkhost(
         name: 'localhost.localdomain',
         ip: '127.0.0.1',
-        host_aliases: 'localhost',
+        host_aliases: ['localhost.localdomain', 'localhost'],
         ensure: :present,
       )
-      expect(genhost(host)).to eq("127.0.0.1\tlocalhost.localdomain\tlocalhost\n")
+      expect(genhost(host)).to eq("127.0.0.1\tlocalhost.localdomain localhost\n")
     end
 
     it 'is able to generate an entry with more than one alias' do
       host = mkhost(
         name: 'host',
         ip: '192.0.0.1',
-        host_aliases: ['a1', 'a2', 'a3', 'a4'],
+        host_aliases: ['host', 'a1', 'a2', 'a3', 'a4'],
         ensure: :present,
       )
-      expect(genhost(host)).to eq("192.0.0.1\thost\ta1 a2 a3 a4\n")
+      expect(genhost(host)).to eq("192.0.0.1\thost a1 a2 a3 a4\n")
     end
 
     it 'is able to generate a simple hostfile entry with comments' do
@@ -189,22 +191,22 @@ describe Puppet::Type.type(:host).provider(:parsed) do
       host = mkhost(
         name: 'localhost.localdomain',
         ip: '127.0.0.1',
-        host_aliases: 'localhost',
+        host_aliases: ['localhost.localdomain','localhost'],
         comment: 'Bazinga!',
         ensure: :present,
       )
-      expect(genhost(host)).to eq("127.0.0.1\tlocalhost.localdomain\tlocalhost\t# Bazinga!\n")
+      expect(genhost(host)).to eq("127.0.0.1\tlocalhost.localdomain localhost\t# Bazinga!\n")
     end
 
     it 'is able to generate an entry with more than one alias and a comment' do
       host = mkhost(
         name: 'host',
         ip: '192.0.0.1',
-        host_aliases: ['a1', 'a2', 'a3', 'a4'],
+        host_aliases: ['host', 'a1', 'a2', 'a3', 'a4'],
         comment: 'Bazinga!',
         ensure: :present,
       )
-      expect(genhost(host)).to eq("192.0.0.1\thost\ta1 a2 a3 a4\t# Bazinga!\n")
+      expect(genhost(host)).to eq("192.0.0.1\thost a1 a2 a3 a4\t# Bazinga!\n")
     end
   end
 end

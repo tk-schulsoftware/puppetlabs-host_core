@@ -592,10 +592,6 @@ describe Puppet::Type.type(:host) do
       end
     end
 
-    it 'does not accept newlines in resourcename' do
-      expect { described_class.new(name: "fo\no", ip: '127.0.0.1') }.to raise_error(Puppet::ResourceError, %r{Hostname cannot include newline})
-    end
-
     it 'does not accept newlines in ipaddress' do
       expect { described_class.new(name: 'foo', ip: "127.0.0.1\n") }.to raise_error(Puppet::ResourceError, %r{Invalid IP address})
     end
@@ -608,12 +604,12 @@ describe Puppet::Type.type(:host) do
       expect { described_class.new(name: 'foo', ip: '127.0.0.1', comment: "Test of comment blah blah \n test 123") }.to raise_error(Puppet::ResourceError, %r{Comment cannot include newline})
     end
 
-    it 'does not accept spaces in resourcename' do
-      expect { described_class.new(name: 'foo bar') }.to raise_error(Puppet::ResourceError, %r{Invalid host name})
-    end
-
     it 'does not accept host_aliases with spaces' do
       expect { described_class.new(name: 'foo', host_aliases: ['well_formed', 'not wellformed']) }.to raise_error(Puppet::ResourceError, %r{Host aliases cannot include whitespace})
+    end
+
+    it 'does not accept host_aliases with newlines' do
+      expect { described_class.new(name: 'foo', host_aliases: ['well_formed', 'fo\no']) }.to raise_error(Puppet::ResourceError, %r{Host aliases cannot include newline})
     end
 
     it 'does not accept empty host_aliases' do

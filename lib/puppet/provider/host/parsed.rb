@@ -20,8 +20,8 @@ Puppet::Type.type(:host).provide(:parsed, parent: Puppet::Provider::ParsedFile,
 
   text_line :comment, match: %r{^#}
   text_line :blank, match: %r{^\s*$}
-  hosts_pattern = '^([0-9a-f:]\S+)\s+([^#\s+]\S+)\s*(.*?)?(?:\s*#\s*(.*))?$'
-  record_line :parsed, fields: ['ip', 'name', 'host_aliases', 'comment'],
+  hosts_pattern = '^([0-9a-f.:]+)\s+([^\s#]+(?:\s+[^\s#]+)*)(?:\s*#\s*(.*))?$'
+  record_line :parsed, fields: ['ip', 'host_aliases', 'comment'],
                        optional: ['host_aliases', 'comment'],
                        match: %r{#{hosts_pattern}},
                        post_parse: proc { |hash|
@@ -32,10 +32,10 @@ Puppet::Type.type(:host).provide(:parsed, parent: Puppet::Provider::ParsedFile,
                                      end
                                    },
                        to_line: proc { |hash|
-                                  [:ip, :name].each do |n|
+                                  [:ip].each do |n|
                                     raise ArgumentError, _('%{attr} is a required attribute for hosts') % { attr: n } unless hash[n] && hash[n] != :absent
                                   end
-                                  str = "#{hash[:ip]}\t#{hash[:name]}"
+                                  str = "#{hash[:ip]}"
                                   if hash.include?(:host_aliases) && !hash[:host_aliases].nil? && hash[:host_aliases] != :absent
                                     str += "\t#{hash[:host_aliases]}"
                                   end

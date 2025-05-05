@@ -45,9 +45,15 @@ Puppet::Type.newtype(:host) do
       true
     end
 
+    def should=(new_should)
+      new_should = resource[:name] if new_should.empty?
+      super(new_should)
+    end
+
     validate do |value|
       # This regex already includes newline check.
       raise Puppet::Error, _('Host aliases cannot include whitespace') if %r{\s}.match?(value)
+      raise Puppet::Error, _('Host aliases cannot include newline') if %r{\\n}.match?(value)
       raise Puppet::Error, _('Host aliases cannot be an empty string. Use an empty array to delete all host_aliases ') if %r{^\s*$}.match?(value)
     end
   end
@@ -76,18 +82,6 @@ Puppet::Type.newtype(:host) do
 
   newparam(:name) do
     desc 'The host name.'
-
     isnamevar
-
-    validate do |value|
-      value.split('.').each do |hostpart|
-        unless %r{^([\w]+|[\w][\w\-]+[\w])$}.match?(hostpart)
-          raise Puppet::Error, _('Invalid host name')
-        end
-      end
-      if value.include?("\n") || value.include?("\r")
-        raise Puppet::Error, _('Hostname cannot include newline')
-      end
-    end
   end
 end
