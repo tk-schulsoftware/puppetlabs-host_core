@@ -10,6 +10,7 @@ Puppet::Type.newtype(:host) do
 
   newproperty(:ip) do
     desc "The host's IP address, IPv4 or IPv6."
+    isnamevar
 
     def valid_v4?(addr)
       data = addr.match(%r{^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$})
@@ -36,6 +37,7 @@ Puppet::Type.newtype(:host) do
   newproperty(:host_aliases, parent: Puppet::Property::OrderedList) do
     desc "Any aliases the host might have.  Multiple values must be
         specified as an array."
+    isnamevar
 
     def delimiter
       ' '
@@ -81,7 +83,6 @@ Puppet::Type.newtype(:host) do
   end
 
   newparam(:name) do
-    desc 'The host name.'
-    isnamevar
+    desc 'An internal unique title for the host entry (not used for matching)'
   end
 end
