@@ -7,13 +7,24 @@ Puppet::Type.type(:host).provide(:custom) do
     target = resource[:target]
     if !File.exist?(target)
       return false
+    end
 
     if !ip_exists?
       return false
+    end
+
+    resource_ip = resource[:ip]
 
     get_all_hosts.each do |host|
       if !host_exists?(host)
         return false
+      end
+      ip_from_host = get_host_ip(host)
+      if same_ip_version?(resource_ip, ip_from_host)
+        if !ip_equal?(resource_ip, ip_from_host)
+          return false
+        end
+      end 
     end
 
     return true
@@ -42,6 +53,7 @@ Puppet::Type.type(:host).provide(:custom) do
         if ip_equal?(tokens.first, ip)
           return true
         end
+      end
     end
     return false
   end
@@ -68,4 +80,36 @@ Puppet::Type.type(:host).provide(:custom) do
   
     return false
   end
+
+  def get_host_ip(host)
+    target = resource[:target]
+    File.foreach(target) do |line|
+      line = line.strip
+      line = line.split('#').first.strip
+      if !line.empty?
+        tokens = line.split(/\s+/)
+        if tokens.include?(host)
+          return tokens.first
+        end
+    end
+  end
+
+  def same_ip_version?(ip1, ip2)
+    begin
+      ip1_obj = IPAddr.new(ip1)
+      ip2_obj = IPAddr.new(ip2)
+      return ip1_obj.ipv4? == ip2_obj.ipv4?
+    rescue IPAddr::InvalidAddressError
+      return false
+    end
+  end
+
+  def get_comment
+    if resource[:name_as_host]
+      return resource[:comment]
+    else
+      return resource[:name] + " - " + resource[:host_aliases]
+    end
+  end
+
 end
