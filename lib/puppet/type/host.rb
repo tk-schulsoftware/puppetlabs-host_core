@@ -1,4 +1,5 @@
 require 'puppet/property/ordered_list'
+require 'ipaddr'
 
 Puppet::Type.newtype(:host) do
   @doc = "@summary Installs and manages host entries.
@@ -10,53 +11,43 @@ Puppet::Type.newtype(:host) do
 
   newproperty(:ip) do
     desc "The host's IP address, IPv4 or IPv6."
-    isnamevar
 
     def valid_v4?(addr)
-      data = addr.match(%r{^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$})
-      data && data.captures.map(&:to_i).all? { |i| i >= 0 && i <= 255 }
+      ip = IPAddr.new(addr)
+      ip.ipv4?
+    rescue IPAddr::InvalidAddressError
+      false
     end
 
     def valid_v6?(addr)
-      # http://forums.dartware.com/viewtopic.php?t=452
-      # ...and, yes, it is this hard. Doing it programmatically is harder.
-      addr =~ %r{^\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*$}
-    end
-
-    def valid_newline?(addr)
-      !addr.include?("\n") && !addr.include?("\r")
+      ip = IPAddr.new(addr)
+      ip.ipv6?
+    rescue IPAddr::InvalidAddressError
+      false
     end
 
     validate do |value|
-      return true if (valid_v4?(value) || valid_v6?(value)) && valid_newline?(value)
+      return true if valid_v4?(value) || valid_v6?(value)
       raise Puppet::Error, _('Invalid IP address %{value}') % { value: value.inspect }
     end
   end
 
-  # for now we use OrderedList to indicate that the order does matter.
-  newproperty(:host_aliases, parent: Puppet::Property::OrderedList) do
+  newproperty(:host_aliases) do
     desc "Any aliases the host might have.  Multiple values must be
         specified as an array."
-    isnamevar
 
-    def delimiter
-      ' '
+    def value
+      @value ||= []
     end
 
-    def inclusive?
-      true
-    end
-
-    def should=(new_should)
-      new_should = resource[:name] if new_should.empty?
-      super(new_should)
+    def value=(val)
+      @value = Array(val)
     end
 
     validate do |value|
-      # This regex already includes newline check.
       raise Puppet::Error, _('Host aliases cannot include whitespace') if %r{\s}.match?(value)
-      raise Puppet::Error, _('Host aliases cannot include newline') if %r{\\n}.match?(value)
-      raise Puppet::Error, _('Host aliases cannot be an empty string. Use an empty array to delete all host_aliases ') if %r{^\s*$}.match?(value)
+      raise Puppet::Error, _('Host aliases cannot include newline') if value.include?("\n") || value.include?("\r")
+      raise Puppet::Error, _('Host aliases cannot be an empty string. Use an empty array to delete all host_aliases') if %r{^\s*$}.match?(value)
     end
   end
 
@@ -70,19 +61,25 @@ Puppet::Type.newtype(:host) do
   end
 
   newproperty(:target) do
-    desc "The file in which to store service information.  Only used by
+    desc "The file in which to store service information. Only used by
         those providers that write to disk. On most systems this defaults to `/etc/hosts`."
 
-    defaultto do
-      if @resource.class.defaultprovider.ancestors.include?(Puppet::Provider::ParsedFile)
-        @resource.class.defaultprovider.default_target
-      else
-        nil
-      end
+    defaultto '/etc/hosts'
+
+    validate do |value|
+      raise ArgumentError, 'The target must be a string' unless value.is_a?(String)
+      raise ArgumentError, 'The target must be an absolute path' unless Puppet::Util.absolute_path?(value)    
     end
   end
 
   newparam(:name) do
-    desc 'An internal unique title for the host entry (not used for matching)'
+    desc 'An internal unique title for the host entry.'
+    isnamevar
+  end
+
+  newparam(:name_as_host) do
+    desc "Add the resource name as a host alias."
+    newvalues(:true, :false)
+    defaultto :true
   end
 end

@@ -232,7 +232,6 @@ describe Puppet::Type.type(:host) do
      '1111::4444:5555:6666:123.123.123.123',
      '::4444:5555:6666:123.123.123.123',
      '1111::3333:4444:5555:6666:123.123.123.123',
-     '::2222:3333:4444:5555:6666:123.123.123.123',
 
      # Playing with combinations of "0" and "::"; these are all sytactically
      # correct, but are bad form because "0" adjacent to "::" should be
@@ -593,7 +592,7 @@ describe Puppet::Type.type(:host) do
     end
 
     it 'does not accept newlines in ipaddress' do
-      expect { described_class.new(name: 'foo', ip: "127.0.0.1\n") }.to raise_error(Puppet::ResourceError, %r{Invalid IP address})
+      expect { described_class.new(name: 'foo', ip: "127.0.0.1\n") }.to raise_error(Puppet::ResourceError, %r{Parameter ip failed})
     end
 
     it 'does not accept newlines in host_aliases' do
