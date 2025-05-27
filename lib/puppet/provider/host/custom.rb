@@ -37,9 +37,7 @@ Puppet::Type.type(:host).provide(:custom) do
   end
 
   def destroy
-    target = resource[:target]
-    resource_ip = resource[:ip]
-
+    # Eintrag löschen
   end
 
   def ip_equal?(ip1, ip2)
@@ -54,7 +52,7 @@ Puppet::Type.type(:host).provide(:custom) do
       line = line.strip
       if !line.empty? && !line.start_with?('#')
         tokens = line.split(/\s+/)
-        if ip_equal?(tokens.first, ip)
+        if ip_equal?(tokens.first, desired_ip)
           return true
         end
       end
@@ -80,8 +78,8 @@ Puppet::Type.type(:host).provide(:custom) do
         if tokens.include?(host)
           return true
         end
-    end
-  
+      end
+    end  
     return false
   end
 
