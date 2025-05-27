@@ -19,12 +19,14 @@ Puppet::Type.type(:host).provide(:custom) do
       if !host_exists?(host)
         return false
       end
-      ip_from_host = get_host_ip(host)
-      if same_ip_version?(resource_ip, ip_from_host)
-        if !ip_equal?(resource_ip, ip_from_host)
-          return false
+      ips_from_host = get_host_ips(host)
+      ips_from_host.each do |ip_from_host|
+        if same_ip_version?(resource_ip, ip_from_host)
+          if !ip_equal?(resource_ip, ip_from_host)
+            return false
+          end
         end
-      end 
+      end
     end
 
     return true
@@ -81,17 +83,24 @@ Puppet::Type.type(:host).provide(:custom) do
     return false
   end
 
-  def get_host_ip(host)
+  def get_host_ips(host)
     target = resource[:target]
+    ips = []
+
     File.foreach(target) do |line|
       line = line.strip
+      next if line.empty? || line.start_with?('#')
+
       line = line.split('#').first.strip
-      if !line.empty?
-        tokens = line.split(/\s+/)
-        if tokens.include?(host)
-          return tokens.first
-        end
+      tokens = line.split(/\s+/)
+      next if tokens.empty?
+
+      if tokens.include?(host)
+        ips << tokens.first
+      end
     end
+
+    ips.uniq
   end
 
   def same_ip_version?(ip1, ip2)
