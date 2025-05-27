@@ -37,11 +37,109 @@ Puppet::Type.type(:host).provide(:custom) do
   end
 
   def create
-    # Eintrag anlegen
+    target = resource[:target]
+    resource_ip = resource[:ip]
+    desired_hosts = get_all_hosts
+    expected_comment = get_comment
+
+    unless File.exist?(target)
+      FileUtils.touch(target)
+    end
+
+    lines = File.readlines(target)
+
+    new_lines = []
+    updated = false
+
+    desired_hosts.each do |host|
+      found = false
+
+      lines.map! do |line|
+        original_line = line
+
+        stripped = line.strip
+        next original_line if stripped.empty? || stripped.start_with?('#')
+
+        content, comment = stripped.split('#', 2).map(&:strip)
+        tokens = content.split(/\s+/)
+        ip = tokens.first
+
+        if tokens.include?(host) && ip_equal?(ip, resource_ip)
+          found = true
+
+          if comment != expected_comment
+            updated = true
+            new_line = "#{content} # #{expected_comment}\n"
+            next new_line
+          end
+        end
+
+        original_line
+      end
+
+      unless found
+        updated = true
+        new_line = "#{resource_ip} #{host}"
+        if expected_comment && !expected_comment.empty?
+          new_line += " # #{expected_comment}"
+        end
+        new_lines << new_line + "\n"
+      end
+    end
+
+    if updated || !new_lines.empty?
+      File.open(target, 'w') do |f|
+        f.puts lines
+        new_lines.each { |l| f.puts l }
+      end
+    end
   end
 
   def destroy
-    # Eintrag löschen
+    target = resource[:target]
+    return unless File.exist?(target)
+
+    resource_ip = resource[:ip]
+    desired_hosts = get_all_hosts
+
+    lines = File.readlines(target)
+    updated_lines = []
+
+    lines.each do |line|
+      original_line = line
+      stripped = line.strip
+
+      if stripped.empty? || stripped.start_with?('#')
+        updated_lines << original_line
+        next
+      end
+
+      content, comment = stripped.split('#', 2).map(&:strip)
+      tokens = content.split(/\s+/)
+      ip = tokens.first
+      rest = tokens[1..] || []
+
+      # Wenn IP gleich und einer der gewünschten Hosts in der Zeile ist
+      if ip_equal?(ip, resource_ip) && (rest & desired_hosts).any?
+        # Entferne alle gewünschten Hosts aus der Zeile
+        remaining_hosts = rest - desired_hosts
+
+        if remaining_hosts.empty?
+          # Nur IP + Kommentar übrig → ganze Zeile entfernen
+          next
+        else
+          # Zeile mit übriggebliebenen Hosts neu schreiben (ohne Kommentar)
+          new_line = "#{ip} #{remaining_hosts.join(' ')}\n"
+          updated_lines << new_line
+        end
+      else
+        updated_lines << original_line
+      end
+    end
+
+    File.open(target, 'w') do |f|
+      f.puts updated_lines
+    end
   end
 
   def ip_equal?(ip1, ip2)
