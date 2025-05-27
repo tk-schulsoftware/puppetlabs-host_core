@@ -24,6 +24,10 @@ Puppet::Type.type(:host).provide(:custom) do
         if same_ip_version?(resource_ip, ip_from_host)
           if !ip_equal?(resource_ip, ip_from_host)
             return false
+          else
+            if !has_comment?(host, resource_ip)
+              return false
+            end
           end
         end
       end
@@ -117,8 +121,29 @@ Puppet::Type.type(:host).provide(:custom) do
     if resource[:name_as_host]
       return resource[:comment]
     else
-      return resource[:name] + " - " + resource[:host_aliases]
+      return resource[:name] + " - " + resource[:comment]
     end
   end
 
+  def has_comment?(host, ip)
+    expected_comment = get_comment&.strip
+    return true if expected_comment.nil? || expected_comment.empty?
+
+    target = resource[:target]
+
+    File.foreach(target) do |line|
+      stripped_line = line.strip
+      next if stripped_line.empty? || stripped_line.start_with?('#')
+
+      content, comment = stripped_line.split('#', 2).map(&:strip)
+      tokens = content.split(/\s+/)
+
+      # Wenn IP und Host in der Zeile sind
+      if tokens.include?(host) && ip_equal?(tokens.first, ip)
+        return comment == expected_comment
+      end
+    end
+
+    return false
+  end
 end
