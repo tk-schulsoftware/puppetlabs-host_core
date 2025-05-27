@@ -140,7 +140,7 @@ Puppet::Type.type(:host).provide(:custom) do
 
       # Wenn IP und Host in der Zeile sind
       if tokens.include?(host) && ip_equal?(tokens.first, ip)
-        return comment == expected_comment
+        return comment.gsub(/\s+/, '') == expected_comment.gsub(/\s+/, '')
       end
     end
 
