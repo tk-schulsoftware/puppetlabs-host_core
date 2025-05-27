@@ -37,7 +37,9 @@ Puppet::Type.type(:host).provide(:custom) do
   end
 
   def destroy
-    # Eintrag löschen
+    target = resource[:target]
+    resource_ip = resource[:ip]
+
   end
 
   def ip_equal?(ip1, ip2)
@@ -89,14 +91,14 @@ Puppet::Type.type(:host).provide(:custom) do
 
     File.foreach(target) do |line|
       line = line.strip
-      next if line.empty? || line.start_with?('#')
 
-      line = line.split('#').first.strip
-      tokens = line.split(/\s+/)
-      next if tokens.empty?
+      if !(line.empty? || line.start_with?('#'))
+        line = line.split('#').first.strip
+        tokens = line.split(/\s+/)
 
-      if tokens.include?(host)
-        ips << tokens.first
+        if tokens.include?(host)
+          ips << tokens.first
+        end
       end
     end
 
