@@ -143,22 +143,62 @@ Puppet::Type.type(:hostentry).provide(:custom) do
   end
 
   def ip
-    resource_ip = resource[:ip]
-    get_all_hosts.each do |host|
-      if !host_exists?(host)
-        return false
-      end
-      ips_from_host = get_host_ips(host)
-      ips_from_host.each do |ip_from_host|
-        if same_ip_version?(resource_ip, ip_from_host)
-          return ip_from_host
-        end
-      end
+    if exists
+      return resource[:ip]
+    else
+      ''
     end
   end
 
-
   def ip=(value)
+    create
+  end
+
+  def host_aliases
+    if exists
+      return resource[:host_aliases]
+    else
+      ''
+    end
+  end
+
+  def host_aliases=(value)
+    create
+  end
+
+  def comment
+    if exists
+      return resource[:comment]
+    else
+      ''
+    end
+  end
+
+  def comment=(value)
+    create
+  end
+
+  def target
+    if exists
+      return resource[:target]
+    else
+      ''
+    end
+  end
+
+  def target=(value)
+    create
+  end
+
+  def target
+    if exists
+      return resource[:target]
+    else
+      ''
+    end
+  end
+
+  def target=(value)
     create
   end
 
