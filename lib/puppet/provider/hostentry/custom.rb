@@ -143,7 +143,7 @@ Puppet::Type.type(:hostentry).provide(:custom) do
   end
 
   def ip
-    if exists
+    if exists?
       return resource[:ip]
     else
       ''
@@ -155,7 +155,7 @@ Puppet::Type.type(:hostentry).provide(:custom) do
   end
 
   def host_aliases
-    if exists
+    if exists?
       return resource[:host_aliases]
     else
       ''
@@ -167,7 +167,7 @@ Puppet::Type.type(:hostentry).provide(:custom) do
   end
 
   def comment
-    if exists
+    if exists?
       return resource[:comment]
     else
       ''
@@ -179,7 +179,7 @@ Puppet::Type.type(:hostentry).provide(:custom) do
   end
 
   def target
-    if exists
+    if exists?
       return resource[:target]
     else
       ''
@@ -191,7 +191,7 @@ Puppet::Type.type(:hostentry).provide(:custom) do
   end
 
   def target
-    if exists
+    if exists?
       return resource[:target]
     else
       ''
