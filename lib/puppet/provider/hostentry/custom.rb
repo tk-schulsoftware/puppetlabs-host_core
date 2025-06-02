@@ -142,6 +142,26 @@ Puppet::Type.type(:hostentry).provide(:custom) do
     end
   end
 
+  def ip
+    resource_ip = resource[:ip]
+    get_all_hosts.each do |host|
+      if !host_exists?(host)
+        return false
+      end
+      ips_from_host = get_host_ips(host)
+      ips_from_host.each do |ip_from_host|
+        if same_ip_version?(resource_ip, ip_from_host)
+          return ip_from_host
+        end
+      end
+    end
+  end
+
+
+  def ip=(value)
+    create
+  end
+
   def ip_equal?(ip1, ip2)
     IPAddr.new(ip1).to_s == IPAddr.new(ip2).to_s
   end
