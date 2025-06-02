@@ -1,6 +1,6 @@
 require 'ipaddr'
 
-Puppet::Type.type(:host).provide(:custom) do
+Puppet::Type.type(:hostentry).provide(:custom) do
   desc "Custom provider to manage host entries in target"
 
   def exists?

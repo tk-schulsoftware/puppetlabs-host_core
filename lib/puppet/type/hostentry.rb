@@ -1,7 +1,7 @@
 require 'puppet/property/ordered_list'
 require 'ipaddr'
 
-Puppet::Type.newtype(:host) do
+Puppet::Type.newtype(:hostentry) do
   @doc = "@summary Installs and manages host entries.
 
       For most systems, these entries will just be in `/etc/hosts`, but some

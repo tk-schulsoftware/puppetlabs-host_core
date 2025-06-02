@@ -1,8 +1,8 @@
 require 'spec_helper'
 
-describe Puppet::Type.type(:host).provider(:custom) do
+describe Puppet::Type.type(:hostentry).provider(:custom) do
   let(:resource) do
-    Puppet::Type.type(:host).new(
+    Puppet::Type.type(:hostentry).new(
       name: 'test.local',
       ip: '192.168.1.100',
       host_aliases: ['alias1', 'alias2'],

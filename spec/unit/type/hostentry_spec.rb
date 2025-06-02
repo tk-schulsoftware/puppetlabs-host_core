@@ -2,9 +2,9 @@ require 'spec_helper'
 
 FakeHostProvider = Struct.new(:ip, :host_aliases, :comment)
 
-describe Puppet::Type.type(:host) do
+describe Puppet::Type.type(:hostentry) do
   let(:provider) { FakeHostProvider.new }
-  let(:resource) { instance_double('Puppet::Type::Host', provider: provider) }
+  let(:resource) { instance_double('Puppet::Type::Hostentry', provider: provider) }
 
   it 'has :name be its namevar' do
     expect(described_class.key_attributes).to eq([:name])
